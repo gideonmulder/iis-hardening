@@ -1,44 +1,52 @@
 function Set-IISSecurity {
-
+    param(
+        [Parameter(Mandatory=$false)][swith]$NoRewrite
+    )
 	$appcmd = $($env:windir + "\system32\inetsrv\appcmd.exe")
 
 	#remove IIS server information
 	#http://stackoverflow.com/questions/1178831/remove-server-response-header-iis7/12615970#12615970
-
+    
 	Write-Output 'Removing IIS and ASP.NET Server identification...'
 	Write-Output '--------------------------------------------------------------------------------'
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"[name='Remove_RESPONSE_Server']" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].patternSyntax:`"Wildcard`""  /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].match.serverVariable:RESPONSE_Server" "/[name='Remove_RESPONSE_Server'].match.pattern:`"*`"" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].action.type:`"Rewrite`"" "/[name='Remove_RESPONSE_Server'].action.value:`" `""  /commit:apphost
-
+    if(-not $NoRewrite)
+    {
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"[name='Remove_RESPONSE_Server']" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].patternSyntax:`"Wildcard`""  /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].match.serverVariable:RESPONSE_Server" "/[name='Remove_RESPONSE_Server'].match.pattern:`"*`"" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Remove_RESPONSE_Server'].action.type:`"Rewrite`"" "/[name='Remove_RESPONSE_Server'].action.value:`" `""  /commit:apphost
+    }
 	& $appcmd set config /section:httpProtocol "/-customHeaders.[name='X-Powered-By']"
+  
 
 	#Enable HTTPS only redirect and add HSTS header
 	#https://www.owasp.org/index.php/HTTP_Strict_Transport_Security#IIS
 
 	#Set HTTPS Only redirect
-	Write-Output 'Setting HTTPS Only'
-	Write-Output '--------------------------------------------------------------------------------'
-	& $appcmd set config  -section:system.webServer/rewrite/rules /+"[name='HTTPS_301_Redirect',stopProcessing='False']" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/rules "/[name='HTTPS_301_Redirect',stopProcessing='False'].match.url:`"(.*)`""  /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/rules "/+[name='HTTPS_301_Redirect',stopProcessing='False'].conditions.[input='{HTTPS}',pattern='off']" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/rules "/[name='HTTPS_301_Redirect',stopProcessing='False'].action.type:`"Redirect`"" "/[name='HTTPS_301_Redirect',stopProcessing='False'].action.url:`"https://{HTTP_HOST}{REQUEST_URI}`""  /commit:apphost
 
+    if(-not $NoRewrite)
+    {
+	    Write-Output 'Setting HTTPS Only'
+	    Write-Output '--------------------------------------------------------------------------------'
+	    & $appcmd set config  -section:system.webServer/rewrite/rules /+"[name='HTTPS_301_Redirect',stopProcessing='False']" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/rules "/[name='HTTPS_301_Redirect',stopProcessing='False'].match.url:`"(.*)`""  /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/rules "/+[name='HTTPS_301_Redirect',stopProcessing='False'].conditions.[input='{HTTPS}',pattern='off']" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/rules "/[name='HTTPS_301_Redirect',stopProcessing='False'].action.type:`"Redirect`"" "/[name='HTTPS_301_Redirect',stopProcessing='False'].action.url:`"https://{HTTP_HOST}{REQUEST_URI}`""  /commit:apphost
+    
 
-	#HSTS header
-	Write-Output 'Configuring HSTS header...'
-	Write-Output '--------------------------------------------------------------------------------'
-	#precondition for HSTS header
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"preConditions.[name='USING_HTTPS']" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules /"+preConditions.[name='USING_HTTPS'].[input='{HTTPS}',pattern='on']" /commit:apphost
+	    #HSTS header
+	    Write-Output 'Configuring HSTS header...'
+	    Write-Output '--------------------------------------------------------------------------------'
+	    #precondition for HSTS header
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"preConditions.[name='USING_HTTPS']" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules /"+preConditions.[name='USING_HTTPS'].[input='{HTTPS}',pattern='on']" /commit:apphost
 
-	#set header
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"[name='Add_HSTS_Header',preCondition='USING_HTTPS']" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header'].patternSyntax:`"Wildcard`""  /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].match.serverVariable:`"RESPONSE_Strict-Transport-Security`"" "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].match.pattern:`"*`"" /commit:apphost
-	& $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].action.type:`"Rewrite`"" "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].action.value:`"max-age=31536000`""  /commit:apphost
-
+	    #set header
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules /+"[name='Add_HSTS_Header',preCondition='USING_HTTPS']" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header'].patternSyntax:`"Wildcard`""  /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].match.serverVariable:`"RESPONSE_Strict-Transport-Security`"" "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].match.pattern:`"*`"" /commit:apphost
+	    & $appcmd set config  -section:system.webServer/rewrite/outboundRules "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].action.type:`"Rewrite`"" "/[name='Add_HSTS_Header',preCondition='USING_HTTPS'].action.value:`"max-age=31536000`""  /commit:apphost
+    }
 	#prevent framejacking
 	#https://support.microsoft.com/en-us/kb/2694329
 	& $appcmd set config -section:httpProtocol "/+customHeaders.[name='X-Frame-Options',value='SAMEORIGIN']"
@@ -80,18 +88,18 @@ function Set-IISSecurity {
 	 
 	# Add and Enable TLS 1.0 for client and server SCHANNEL communications
 	New-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server' -name 'Enabled' -value 1 -PropertyType 'DWord' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server' -name 'DisabledByDefault' -value 0 -PropertyType 'DWord' -Force | Out-Null
-	Write-Output 'TLS 1.0 has been enabled.'
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server' -name 'Enabled' -value 0 -PropertyType 'DWord' -Force | Out-Null
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server' -name 'DisabledByDefault' -value 1 -PropertyType 'DWord' -Force | Out-Null
+	Write-Output 'TLS 1.0 has been disabled.'
 	 
 	# Add and Enable TLS 1.1 for client and server SCHANNEL communications
 	New-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server' -Force | Out-Null
 	New-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server' -name 'Enabled' -value 1 -PropertyType 'DWord' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server' -name 'DisabledByDefault' -value 0 -PropertyType 'DWord' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client' -name 'Enabled' -value 1 -PropertyType 'DWord' -Force | Out-Null
-	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client' -name 'DisabledByDefault' -value 0 -PropertyType 'DWord' -Force | Out-Null
-	Write-Output 'TLS 1.1 has been enabled.'
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server' -name 'Enabled' -value 0 -PropertyType 'DWord' -Force | Out-Null
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Server' -name 'DisabledByDefault' -value 1 -PropertyType 'DWord' -Force | Out-Null
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client' -name 'Enabled' -value 0 -PropertyType 'DWord' -Force | Out-Null
+	New-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.1\Client' -name 'DisabledByDefault' -value 1 -PropertyType 'DWord' -Force | Out-Null
+	Write-Output 'TLS 1.1 has been disabled.'
 	 
 	# Add and Enable TLS 1.2 for client and server SCHANNEL communications
 	New-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server' -Force | Out-Null
@@ -205,4 +213,77 @@ function Set-IISSecurity {
 	Write-Host -ForegroundColor Red 'A computer restart is required to apply settings. Restart computer now?'
 	Restart-Computer -Force -Confirm
 
+}
+
+function Test-ProtocolEnabled($protocol){
+    $enabled = Get-ItemProperty -Path ('HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\{0}\Server' -f $protocol) -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Enabled' -ErrorAction SilentlyContinue
+    $disableByDefault = Get-ItemProperty -Path ('HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\{0}\Server' -f $protocol) -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'DisabledByDefault' -ErrorAction SilentlyContinue
+    if($enabled -ne $null -and $disableByDefault -ne $null)
+    {
+        $retVal = -not ($enabled -eq 0);
+        $retVal = $retVal -and $disableByDefault -eq 1;
+        return $retVal;
+    }
+    return $true;
+}
+
+function Test-CipherEnabled($protocol){
+    $enabled = Get-ItemProperty -Path ('HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\{0}' -f $protocol) -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Enabled' -ErrorAction SilentlyContinue    
+    if($enabled -ne $null)
+    {
+        $retVal = -not ($enabled -eq 0);
+        return $retVal;
+    }
+    return $true;
+}
+
+function Test-FunctionsConfigured(){
+    $enabled = Get-ItemProperty -Path ('HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002') -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Functions' -ErrorAction SilentlyContinue    
+    if($enabled -ne $null)
+    {
+        return $true
+    }
+    return $false;
+}
+
+function Get-IISSecurity {
+
+	$appcmd = $($env:windir + "\system32\inetsrv\appcmd.exe")
+	 
+	Write-Host 'Running Get-IISSecurity'
+    Write-Host 'Getting IIS with SSL/TLS Deployment Best Practices...'
+	Write-Host '--------------------------------------------------------------------------------'
+    $result = @{};
+
+    $protocolList = @(
+    'Multi-Protocol Unified Hello',
+    'PCT 1.0',
+    'SSL 2.0',
+    'SSL 3.0',
+    'TLS 1.0',
+    'TLS 1.1',
+    'TLS 1.2'
+    )
+    foreach($protocol in $protocolList)
+    {
+        $result.Add("Protocol:$protocol", -not (Test-ProtocolEnabled $protocol));
+    }
+    $insecureCiphers = @(
+	  'DES 56/56',
+	  'NULL',
+	  'RC2 128/128',
+	  'RC2 40/128',
+	  'RC2 56/128',
+	  'RC4 40/128',
+	  'RC4 56/128',
+	  'RC4 64/128',
+	  'RC4 128/128'
+	)
+
+    foreach ($insecureCipher in $insecureCiphers) {
+        $result.Add("Cipher:$insecureCipher", -not (Test-CipherEnabled $insecureCipher));
+    }
+    $result.Add("Functions configured",(Test-FunctionsConfigured));
+    
+    return $result
 }
