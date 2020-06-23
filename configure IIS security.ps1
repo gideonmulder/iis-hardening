@@ -287,3 +287,15 @@ function Get-IISSecurity {
     
     return $result
 }
+
+$sec = (Get-IISSecurity)
+$lst = $sec.GetEnumerator() | Select-Object -Property @{N='Property';E={$_.Key}},
+    @{N='PropValue';E={$_.Value}} | Sort-Object Property
+
+Write-Host "Output goes to Clipboard;)" -ForegroundColor Yellow
+
+$outStr = "";
+#$outStr += ($lst | select -ExpandProperty Property) -join "`t"
+#$outStr += "`r`n"
+$outStr += ($lst | select -ExpandProperty PropValue) -join "`t"
+Set-Clipboard -Value $outStr
