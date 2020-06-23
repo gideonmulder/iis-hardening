@@ -221,7 +221,7 @@ function Test-ProtocolEnabled($protocol){
     if($enabled -ne $null -and $disableByDefault -ne $null)
     {
         $retVal = -not ($enabled -eq 0);
-        $retVal = $retVal -and $disableByDefault -eq 1;
+        $retVal = $retVal -and -not ($disableByDefault -eq 1);
         return $retVal;
     }
     return $true;
