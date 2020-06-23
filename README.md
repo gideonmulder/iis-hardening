@@ -6,5 +6,5 @@ configure iis security.ps1 - script for configuring security. Basic version with
 Get-SslCipher.ps1 - basic script to check a website's SSL/TLS capability
 
 # Changes to the original
-Get-IISSecurity
-URLRewrite optional
+- Get-IISSecurity
+- URLRewrite optional
