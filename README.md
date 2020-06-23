@@ -7,3 +7,4 @@ Get-SslCipher.ps1 - basic script to check a website's SSL/TLS capability
 
 # Changes to the original
 Get-IISSecurity
+URLRewrite optional
